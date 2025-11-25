@@ -1,0 +1,63 @@
+name: Build & Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      build_android:
+        description: "Build Android APK"
+        required: false
+        default: "true"
+      build_web:
+        description: "Build Web release"
+        required: false
+        default: "true"
+
+jobs:
+  flutter-build:
+    runs-on: ubuntu-latest
+    env:
+      FLUTTER_VERSION: 3.24.3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build Android APK
+        if: ${{ github.event.inputs.build_android != 'false' }}
+        run: flutter build apk --release
+
+      - name: Upload Android artifact
+        if: ${{ github.event.inputs.build_android != 'false' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pure-read-android
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Build Web release
+        if: ${{ github.event.inputs.build_web != 'false' }}
+        run: flutter build web --release
+
+      - name: Upload Web artifact
+        if: ${{ github.event.inputs.build_web != 'false' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pure-read-web
+          path: build/web
